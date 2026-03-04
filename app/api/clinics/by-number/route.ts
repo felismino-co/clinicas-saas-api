@@ -35,6 +35,13 @@ export async function GET(request: NextRequest) {
   const normalizedNumber = number.trim();
 
   try {
+    // Log de entrada para depuração
+    // eslint-disable-next-line no-console
+    console.log(
+      "[/api/clinics/by-number] Buscando clínica para número:",
+      normalizedNumber,
+    );
+
     const { data, error } = await supabase
       .from("whatsapp_channels")
       .select(
@@ -55,6 +62,16 @@ export async function GET(request: NextRequest) {
       .eq("active", true)
       .maybeSingle();
 
+    // Logs detalhados do resultado da query
+    // eslint-disable-next-line no-console
+    console.log(
+      "[/api/clinics/by-number] Resultado Supabase:",
+      "error =",
+      error,
+      "data =",
+      data,
+    );
+
     if (error) {
       // eslint-disable-next-line no-console
       console.error("Erro ao buscar clínica por número:", error);
@@ -67,13 +84,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const row = data as WhatsappChannelWithClinic | null;
-
-    if (!row || !row.clinic) {
+    // Tratamento explícito para caso de nenhum registro encontrado
+    if (!data) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[/api/clinics/by-number] Nenhum canal encontrado para número:",
+        normalizedNumber,
+      );
       return NextResponse.json(
         {
           error: "clinic_not_found",
           message: "Nenhuma clínica configurada para este número.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const row = data as WhatsappChannelWithClinic;
+
+    if (!row.clinic) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[/api/clinics/by-number] Canal encontrado, mas relacionamento com clínica vazio:",
+        row,
+      );
+      return NextResponse.json(
+        {
+          error: "clinic_not_found",
+          message: "Canal encontrado, mas nenhuma clínica associada.",
         },
         { status: 404 },
       );

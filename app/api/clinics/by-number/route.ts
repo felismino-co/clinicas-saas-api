@@ -10,11 +10,17 @@ type ClinicRow = {
   ai_overrides: unknown | null;
 };
 
-type WhatsappChannelWithClinic = {
-  id: string;
-  phone_number: string;
-  clinic: ClinicRow | null;
-};
+type WhatsappChannelWithClinic =
+  | {
+      id: string;
+      phone_number: string;
+      clinic: ClinicRow | null;
+    }
+  | {
+      id: string;
+      phone_number: string;
+      clinic: ClinicRow[] | null;
+    };
 
 function badRequest(message: string) {
   return NextResponse.json(
@@ -102,7 +108,11 @@ export async function GET(request: NextRequest) {
 
     const row = data as WhatsappChannelWithClinic;
 
-    if (!row.clinic) {
+    const clinicRelation = Array.isArray(row.clinic)
+      ? row.clinic[0] ?? null
+      : row.clinic;
+
+    if (!clinicRelation) {
       // eslint-disable-next-line no-console
       console.warn(
         "[/api/clinics/by-number] Canal encontrado, mas relacionamento com clínica vazio:",
@@ -117,7 +127,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const clinic = row.clinic;
+    const clinic = clinicRelation;
 
     const responseBody = {
       clinic_id: clinic.id,

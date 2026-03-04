@@ -27,7 +27,14 @@ async function fetchAppointments() {
     return { appointments: [], date: today };
   }
 
-  return { appointments: data ?? [], date: today };
+  const normalized = (data ?? []).map((a: any) => ({
+    ...a,
+    patients: Array.isArray(a.patients) ? a.patients[0] ?? null : a.patients,
+    providers: Array.isArray(a.providers) ? a.providers[0] ?? null : a.providers,
+    services: Array.isArray(a.services) ? a.services[0] ?? null : a.services,
+  }));
+  
+  return { appointments: normalized, date: today };
 }
 
 

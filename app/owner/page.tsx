@@ -33,6 +33,12 @@ export default function OwnerPage() {
   const [impersonateClinicName, setImpersonateClinicName] = useState<string | null>(null);
   const [showTour, setShowTour] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    subscription_status?: string;
+    plan?: string;
+    plan_expires_at?: string | null;
+    overdue_since?: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -54,6 +60,14 @@ export default function OwnerPage() {
   const isAdminMode = isAdmin && !currentUser?.clinic_id && !impersonateClinicId;
   const isImpersonating = !!impersonateClinicId;
   const showToast = (message: string, type: ToastType) => setToast({ message, type });
+
+  useEffect(() => {
+    if (isAdmin || !clinicId) return;
+    fetch(`/api/billing?clinic_id=${encodeURIComponent(clinicId)}`)
+      .then((res) => res.json())
+      .then((data) => setSubscriptionStatus(data?.subscription ?? null))
+      .catch(() => setSubscriptionStatus(null));
+  }, [isAdmin, clinicId]);
 
   const is = (v: View) => activeView === v;
 
@@ -124,6 +138,31 @@ export default function OwnerPage() {
           </button>
         </div>
       )}
+      {!isAdmin && subscriptionStatus?.subscription_status === "overdue" && (() => {
+        const overdueSince = subscriptionStatus.overdue_since;
+        const daysOverdue = overdueSince ? Math.floor((Date.now() - new Date(overdueSince).getTime()) / (24 * 60 * 60 * 1000)) : 0;
+        const daysUntilBlock = Math.max(0, 3 - daysOverdue);
+        return (
+          <div className="flex items-center justify-between gap-4 bg-amber-500 px-4 py-2.5 text-sm font-medium text-amber-950">
+            <span>⚠️ Pagamento pendente. Sua clínica será suspensa em {daysUntilBlock} dia(s). Regularize agora →</span>
+            <button type="button" onClick={() => setActiveView("subscription")} className="rounded bg-amber-600 px-3 py-1 text-white hover:bg-amber-700 shrink-0">
+              Assinatura
+            </button>
+          </div>
+        );
+      })()}
+      {!isAdmin && subscriptionStatus?.subscription_status === "trial" && subscriptionStatus?.plan_expires_at && (() => {
+        const expiresAt = new Date(subscriptionStatus.plan_expires_at);
+        const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+        return (
+          <div className="flex items-center justify-between gap-4 bg-blue-500 px-4 py-2.5 text-sm font-medium text-blue-950">
+            <span>🎯 Trial: {daysLeft} dia(s) restantes. Assine agora para não perder o acesso →</span>
+            <button type="button" onClick={() => setActiveView("subscription")} className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700 shrink-0">
+              Assinatura
+            </button>
+          </div>
+        );
+      })()}
       <div className="flex flex-1">
       <button
         type="button"

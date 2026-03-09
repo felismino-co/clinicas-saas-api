@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await supabase
       .from("clinics")
-      .select("id, name, plan, plan_expires_at, active, stripe_customer_id, stripe_subscription_id")
+      .select("id, name, plan, plan_expires_at, active, stripe_customer_id, stripe_subscription_id, subscription_status, overdue_since, last_payment_at")
       .eq("id", clinicId)
       .maybeSingle();
 
@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
       active: row.active !== false,
       stripe_customer_id: row.stripe_customer_id ?? null,
       stripe_subscription_id: row.stripe_subscription_id ?? null,
+      subscription_status: row.subscription_status ?? "trial",
+      overdue_since: row.overdue_since ?? null,
+      last_payment_at: row.last_payment_at ?? null,
     };
     return NextResponse.json({ clinic: row, subscription: status }, { status: 200 });
   } catch {

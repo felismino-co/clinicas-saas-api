@@ -1,0 +1,70 @@
+{
+  "name": "Verificar assinaturas (diário 9h)",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "Todo dia 9h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "http",
+      "name": "POST check-subscriptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [220, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BASE_URL || 'https://seu-dominio.com' }}/api/automations/check-subscriptions",
+        "options": {}
+      }
+    },
+    {
+      "id": "if",
+      "name": "Se bloqueou alguma",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "c1", "leftValue": "={{ $json.blocked_count }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "log",
+      "name": "Log resultado",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, -60],
+      "parameters": {},
+      "notes": "blocked_count e checked_count disponíveis em $json"
+    }
+  ],
+  "connections": {
+    "Todo dia 9h": {
+      "main": [[{ "node": "POST check-subscriptions", "type": "main", "index": 0 }]]
+    },
+    "POST check-subscriptions": {
+      "main": [[{ "node": "Se bloqueou alguma", "type": "main", "index": 0 }]]
+    },
+    "Se bloqueou alguma": {
+      "main": [
+        [{ "node": "Log resultado", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "meta": { "templateCredsSetupCompleted": false },
+  "settings": {}
+}

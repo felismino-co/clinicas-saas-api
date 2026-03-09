@@ -16,6 +16,7 @@ function isPublic(pathname: string): boolean {
     pathname === "/login" ||
     pathname === "/landing" ||
     pathname === "/unauthorized" ||
+    pathname === "/subscription-blocked" ||
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/booking/") ||
     pathname.startsWith("/api/auth/") ||
@@ -104,12 +105,54 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(unauthorizedUrl);
   }
 
-  // Se tem role, permitir acesso mesmo com clinic_id null; a página trata.
-  const requestHeaders = new Headers(request.headers);
-  if (clinicId) {
-    requestHeaders.set("x-clinic-id", clinicId);
+  // Admin nunca bloqueia por assinatura
+  const isAdminRole = role === "admin";
+  if (isAdminRole) {
+    const requestHeaders = new Headers(request.headers);
+    if (clinicId) requestHeaders.set("x-clinic-id", clinicId);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // Verificação de assinatura para /owner e /secretary
+  if ((pathname.startsWith("/owner") || pathname.startsWith("/secretary")) && clinicId) {
+    const { data: clinic } = await supabaseAnon
+      .from("clinics")
+      .select("active, subscription_status, plan_expires_at")
+      .eq("id", clinicId)
+      .maybeSingle();
+
+    if (clinic) {
+      const row = clinic as { active?: boolean; subscription_status?: string; plan_expires_at?: string | null };
+      const active = row.active !== false;
+      const status = row.subscription_status ?? "trial";
+      const expiresAt = row.plan_expires_at ? new Date(row.plan_expires_at) : null;
+      const now = new Date();
+
+      if (!active) {
+        const reason = status === "blocked" ? "blocked" : status === "canceled" ? "canceled" : "trial_expired";
+        const blockedUrl = new URL("/subscription-blocked", request.url);
+        blockedUrl.searchParams.set("reason", reason);
+        return NextResponse.redirect(blockedUrl);
+      }
+      if (status === "trial" && expiresAt && expiresAt.getTime() < now.getTime()) {
+        const blockedUrl = new URL("/subscription-blocked", request.url);
+        blockedUrl.searchParams.set("reason", "trial_expired");
+        return NextResponse.redirect(blockedUrl);
+      }
+
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set("x-clinic-id", clinicId);
+      if (status === "overdue") {
+        const res = NextResponse.next({ request: { headers: requestHeaders } });
+        res.headers.set("x-subscription-overdue", "true");
+        return res;
+      }
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+  }
+
+  const requestHeaders = new Headers(request.headers);
+  if (clinicId) requestHeaders.set("x-clinic-id", clinicId);
   return NextResponse.next({
     request: { headers: requestHeaders },
   });
@@ -119,6 +162,7 @@ export const config = {
   matcher: [
     "/",
     "/landing",
+    "/subscription-blocked",
     "/secretary",
     "/secretary/:path*",
     "/owner",

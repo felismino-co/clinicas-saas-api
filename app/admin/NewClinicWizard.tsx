@@ -7,7 +7,7 @@ type Professional = { full_name: string; specialty: string };
 type Service = { name: string; duration_minutes: string; price: string };
 
 const PLANS = [
-  { value: "trial", label: "Trial (30 dias grátis)" },
+  { value: "trial", label: "Trial (15 dias grátis)" },
   { value: "basico", label: "Básico R$197" },
   { value: "pro", label: "Pro R$397" },
   { value: "enterprise", label: "Enterprise R$797" },

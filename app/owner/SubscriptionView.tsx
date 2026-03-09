@@ -6,6 +6,9 @@ type Status = {
   plan: string;
   plan_expires_at: string | null;
   active: boolean;
+  subscription_status?: string;
+  overdue_since?: string | null;
+  last_payment_at?: string | null;
 };
 
 type Props = {
@@ -71,7 +74,7 @@ export default function SubscriptionView({ clinicId }: Props) {
     priceByPlanKey[key] = Number(p.price_month) || 0;
   });
   const planPriceLabel = (planKey: string): string => {
-    if (planKey === "trial") return "Grátis por 30 dias";
+    if (planKey === "trial") return "Grátis por 15 dias";
     const num = priceByPlanKey[planKey];
     return num != null && !Number.isNaN(num) ? `R$ ${num.toLocaleString("pt-BR")}/mês` : "—";
   };
@@ -142,20 +145,61 @@ export default function SubscriptionView({ clinicId }: Props) {
   const isTrial = plan === "trial";
   const expiresAt = status.plan_expires_at ? new Date(status.plan_expires_at) : null;
   const now = new Date();
-  const trialDaysTotal = 30;
+  const trialDaysTotal = 15;
   const trialStart = expiresAt ? new Date(expiresAt.getTime() - trialDaysTotal * 24 * 60 * 60 * 1000) : now;
   const daysUsed = expiresAt ? Math.max(0, Math.floor((now.getTime() - trialStart.getTime()) / (24 * 60 * 60 * 1000))) : 0;
-  const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))) : (isTrial ? 30 : 0);
+  const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))) : (isTrial ? 15 : 0);
   const progressPct = isTrial && trialDaysTotal > 0 ? Math.min(100, (daysUsed / trialDaysTotal) * 100) : 0;
 
+  const subStatus = (status as Status & { subscription_status?: string }).subscription_status ?? (isTrial ? "trial" : isActive ? "active" : "blocked");
+  const overdueSince = (status as Status & { overdue_since?: string | null }).overdue_since;
+  const daysOverdue = overdueSince ? Math.floor((now.getTime() - new Date(overdueSince).getTime()) / (24 * 60 * 60 * 1000)) : 0;
+  const daysUntilBlock = Math.max(0, 3 - daysOverdue);
+
   const statusBadge =
-    !isActive ? "Vencido" : isTrial ? "Trial" : "Ativo";
+    subStatus === "blocked" || subStatus === "canceled"
+      ? subStatus === "canceled"
+        ? "Cancelada"
+        : "Suspensa"
+      : subStatus === "overdue"
+        ? "Pagamento pendente"
+        : !isActive
+          ? "Vencido"
+          : isTrial
+            ? "Trial"
+            : "Ativa";
   const statusColor =
-    !isActive ? "bg-rose-100 text-rose-800" : isTrial ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800";
+    subStatus === "blocked" || subStatus === "canceled"
+      ? "bg-rose-100 text-rose-800"
+      : subStatus === "overdue"
+        ? "bg-amber-100 text-amber-800"
+        : isTrial
+          ? "bg-amber-100 text-amber-800"
+          : "bg-emerald-100 text-emerald-800";
 
   return (
     <div className="space-y-8">
       <h2 className="text-lg font-semibold text-slate-900">Assinatura</h2>
+
+      {subStatus === "overdue" && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
+          <p className="font-medium">Seu pagamento está pendente. Regularize para evitar suspensão.</p>
+          <p className="mt-1 text-sm">Você tem {daysUntilBlock} dia(s) de tolerância.</p>
+        </div>
+      )}
+
+      {/* Status da assinatura */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <h3 className="text-sm font-medium text-slate-700">Status da assinatura</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className={`rounded-full px-3 py-1 text-sm font-medium ${statusColor}`}>
+            {statusBadge}
+            {subStatus === "trial" && daysLeft >= 0 && ` — ${daysLeft} dias restantes`}
+            {subStatus === "active" && expiresAt && ` — próximo vencimento: ${expiresAt.toLocaleDateString("pt-BR")}`}
+            {subStatus === "overdue" && ` — ${daysUntilBlock} dias para suspensão`}
+          </span>
+        </div>
+      </div>
 
       {/* Seção 1 — Plano atual */}
       <div className="rounded-xl border-2 border-indigo-100 bg-white p-6 shadow-sm">
@@ -270,6 +314,12 @@ export default function SubscriptionView({ clinicId }: Props) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Histórico de pagamentos (mock) */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <h3 className="text-sm font-medium text-slate-700">Histórico de pagamentos</h3>
+        <p className="mt-2 text-sm text-slate-500">Em breve: histórico completo de faturas e pagamentos.</p>
       </div>
 
       {/* Seção 3 — Felismino Company */}

@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   const baseSlug = clinicPayload.slug?.trim() || slugFromName(clinicPayload.name) || "clinica";
   const planValue = plan ?? "trial";
-  const planExpiresAt = planValue === "trial" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+  const planExpiresAt = planValue === "trial" ? new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString() : null;
 
   async function ensureUniqueSlug(desired: string): Promise<string> {
     const { data: existing } = await supabase.from("clinics").select("id").eq("slug", desired).maybeSingle();

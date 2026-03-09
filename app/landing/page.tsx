@@ -30,7 +30,7 @@ export default function LandingPage() {
     priceByKey[planNameToKey(p.name)] = Number(p.price_month) || 0;
   });
   const planPrice = (key: string): string => {
-    if (key === "trial") return "Grátis 30 dias";
+    if (key === "trial") return "Grátis 15 dias";
     const num = priceByKey[key];
     if (num == null || Number.isNaN(num)) return "—";
     const value = yearly ? Math.round(num * 0.8 * 12) / 12 : num;
@@ -38,7 +38,7 @@ export default function LandingPage() {
   };
 
   const displayPlans = [
-    { key: "trial", name: "Trial", features: ["30 dias grátis", "1 profissional", "Até 50 agendamentos/mês"] },
+    { key: "trial", name: "Trial", features: ["15 dias grátis", "1 profissional", "Até 50 agendamentos/mês"] },
     { key: "pro", name: "Pro", popular: true, features: ["Até 5 profissionais", "Agendamentos ilimitados", "IA + Campanhas", "Relatórios avançados"] },
     { key: "enterprise", name: "Enterprise", features: ["Profissionais ilimitados", "Suporte dedicado", "IA personalizada"] },
   ];
@@ -61,7 +61,7 @@ export default function LandingPage() {
                   href="/onboarding"
                   className="inline-block rounded-lg bg-white px-6 py-3 text-center text-base font-semibold text-emerald-700 shadow-lg transition hover:bg-emerald-50 sm:px-8"
                 >
-                  Começar grátis por 30 dias
+                  Começar grátis por 15 dias
                 </Link>
                 <a
                   href="#features"
@@ -289,7 +289,7 @@ export default function LandingPage() {
       <section className="bg-gradient-to-br from-emerald-600 to-teal-700 px-4 py-12 sm:py-16">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">Comece hoje. Cancele quando quiser.</h2>
-          <p className="mt-2 text-emerald-100">Sem cartão de crédito. Trial grátis por 30 dias.</p>
+          <p className="mt-2 text-emerald-100">Sem cartão de crédito. Trial grátis por 15 dias.</p>
           <Link
             href="/onboarding"
             className="mt-6 inline-block rounded-lg bg-white px-8 py-4 text-lg font-semibold text-emerald-700 shadow-lg hover:bg-emerald-50"

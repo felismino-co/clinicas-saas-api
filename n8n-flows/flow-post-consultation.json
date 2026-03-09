@@ -1,0 +1,41 @@
+{
+  "name": "Pós-consulta (a cada 2h)",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "A cada 2 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 2 }]
+        }
+      }
+    },
+    {
+      "id": "http",
+      "name": "POST Pós-consulta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [220, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BASE_URL || 'https://seu-dominio.com' }}/api/automations/post-consultation",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clinic_id", "value": "={{ $json.clinic_id }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "A cada 2 horas": {
+      "main": [[{ "node": "POST Pós-consulta", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {},
+  "settings": {}
+}

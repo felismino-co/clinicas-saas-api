@@ -1,0 +1,49 @@
+{
+  "name": "Parabéns aniversariantes (diário 9h)",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "Todo dia 9h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "http",
+      "name": "POST Aniversariantes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [220, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BASE_URL || 'https://seu-dominio.com' }}/api/owner/birthdays",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "clinic_id", "value": "={{ $env.CLINIC_ID || 'uuid-da-clinica' }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "send_messages", "value": true }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "Configure BASE_URL e CLINIC_ID no N8n ou substitua no body. Para múltiplas clínicas, use um loop que chame este endpoint com cada clinic_id."
+    }
+  ],
+  "connections": {
+    "Todo dia 9h": {
+      "main": [[{ "node": "POST Aniversariantes", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": { "templateCredsSetupCompleted": false },
+  "settings": {}
+}

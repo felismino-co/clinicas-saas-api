@@ -11,20 +11,28 @@ function badRequest(message: string) {
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const clinicId = url.searchParams.get("clinic_id");
-  const phone = url.searchParams.get("phone");
+  const q = url.searchParams.get("q")?.trim() || "";
+  const phone = url.searchParams.get("phone")?.trim();
 
-  if (!clinicId || !phone) {
-    return badRequest(
-      "Parâmetros 'clinic_id' e 'phone' são obrigatórios na busca de pacientes.",
-    );
+  if (!clinicId) {
+    return badRequest("Parâmetro 'clinic_id' é obrigatório.");
   }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("patients")
       .select("id, clinic_id, full_name, phone, email, tags")
-      .eq("clinic_id", clinicId)
-      .eq("phone", phone);
+      .eq("clinic_id", clinicId);
+
+    if (phone) {
+      query = query.eq("phone", phone);
+    } else if (q) {
+      query = query.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
+    } else {
+      return NextResponse.json({ patients: [] }, { status: 200 });
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       // eslint-disable-next-line no-console

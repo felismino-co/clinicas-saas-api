@@ -1,0 +1,79 @@
+{
+  "name": "WhatsApp enviar (múltiplas com delay)",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook Receber",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "parameters": {
+        "path": "whatsapp-send",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "placeholder"
+    },
+    {
+      "id": "loop",
+      "name": "Para cada mensagem",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [220, 0],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "wait",
+      "name": "Aguardar delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [440, 0],
+      "parameters": {
+        "amount": "={{ $json.delay || 0 }}",
+        "unit": "milliseconds"
+      }
+    },
+    {
+      "id": "zapi",
+      "name": "Z-API Enviar texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [660, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $('Webhook Receber').item.json.instance_id }}/token/{{ $('Webhook Receber').item.json.token }}/send-text",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "phone", "value": "={{ $('Webhook Receber').item.json.phone }}" },
+            { "name": "message", "value": "={{ $json.message }}" }
+          ]
+        }
+      },
+      "notes": "Body esperado: { phone, messages: string[], delays: number[], instance_id, token }"
+    },
+    {
+      "id": "respond",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [880, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Receber": { "main": [[{ "node": "Para cada mensagem", "type": "main", "index": 0 }]] },
+    "Para cada mensagem": { "main": [[{ "node": "Aguardar delay", "type": "main", "index": 0 }]] },
+    "Aguardar delay": { "main": [[{ "node": "Z-API Enviar texto", "type": "main", "index": 0 }]] },
+    "Z-API Enviar texto": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
+  },
+  "meta": {},
+  "settings": {}
+}

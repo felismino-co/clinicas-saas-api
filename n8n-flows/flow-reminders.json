@@ -1,0 +1,42 @@
+{
+  "name": "Lembretes de agendamento (diário)",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "Todo dia 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "http",
+      "name": "POST Lembretes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [220, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BASE_URL || 'https://seu-dominio.com' }}/api/automations/reminders",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clinic_id", "value": "={{ $json.clinic_id }}" }
+          ]
+        }
+      },
+      "notes": "Para cada clínica ativa, chame este endpoint com clinic_id. Configure um loop de clínicas antes deste nó."
+    }
+  ],
+  "connections": {
+    "Todo dia 8h": {
+      "main": [[{ "node": "POST Lembretes", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": { "templateCredsSetupCompleted": false },
+  "settings": {}
+}

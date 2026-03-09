@@ -1,0 +1,54 @@
+{
+  "name": "Enviar confirmação única (Webhook)",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "parameters": {
+        "path": "send-confirmation",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "placeholder"
+    },
+    {
+      "id": "zapi",
+      "name": "Z-API Enviar texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [220, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $json.instance_id }}/token/{{ $json.token }}/send-text",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "phone", "value": "={{ $json.phone }}" },
+            { "name": "message", "value": "={{ $json.message }}" }
+          ]
+        }
+      },
+      "notes": "Body: { phone, message, appointment_id?, instance_id, token }"
+    },
+    {
+      "id": "respond",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [440, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Z-API Enviar texto", "type": "main", "index": 0 }]] },
+    "Z-API Enviar texto": { "main": [[{ "node": "Responder", "type": "main", "index": 0 }]] }
+  },
+  "meta": {},
+  "settings": {}
+}

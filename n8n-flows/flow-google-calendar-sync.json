@@ -1,0 +1,107 @@
+{
+  "name": "Google Calendar - Sincronização de agendamentos",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook (appointment created/updated)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "parameters": {
+        "path": "google-calendar-sync",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "placeholder-configure-no-n8n",
+      "notes": "Chamado quando um agendamento é criado ou atualizado. Payload esperado: { clinic_id, provider_id, appointment_id, starts_at, ends_at, patient_name, service_name }"
+    },
+    {
+      "id": "check-integration",
+      "name": "Verificar se provider tem Google Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [240, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BASE_URL || 'https://seu-dominio.com' }}/api/integrations/google-calendar?provider_id={{ $json.body.provider_id }}",
+        "options": {}
+      },
+      "notes": "GET /api/integrations/google-calendar?provider_id= — confira se retorna connected: true antes de prosseguir."
+    },
+    {
+      "id": "if-connected",
+      "name": "Se conectado",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "cond1", "leftValue": "={{ $json.connected }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "google-calendar",
+      "name": "Google Calendar - Criar/atualizar evento",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [680, -80],
+      "parameters": {
+        "operation": "create",
+        "calendarId": "primary",
+        "title": "={{ $('Webhook').item.json.body.patient_name }} - {{ $('Webhook').item.json.body.service_name }}",
+        "start": "={{ $('Webhook').item.json.body.starts_at }}",
+        "end": "={{ $('Webhook').item.json.body.ends_at }}",
+        "additionalFields": {}
+      },
+      "notes": "Configure as credenciais OAuth2 do Google no n8n. Use o calendário vinculado à integração do profissional."
+    },
+    {
+      "id": "response",
+      "name": "Resposta de sucesso",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, -80],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, eventId: $json.id } }}"
+      }
+    },
+    {
+      "id": "response-skip",
+      "name": "Resposta (não conectado)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 80],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, reason: 'google_calendar_not_connected' } }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (appointment created/updated)": {
+      "main": [[{ "node": "Verificar se provider tem Google Calendar", "type": "main", "index": 0 }]]
+    },
+    "Verificar se provider tem Google Calendar": {
+      "main": [[{ "node": "Se conectado", "type": "main", "index": 0 }]]
+    },
+    "Se conectado": {
+      "main": [
+        [{ "node": "Google Calendar - Criar/atualizar evento", "type": "main", "index": 0 }],
+        [{ "node": "Resposta (não conectado)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Calendar - Criar/atualizar evento": {
+      "main": [[{ "node": "Resposta de sucesso", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": { "templateCredsSetupCompleted": false },
+  "settings": {}
+}

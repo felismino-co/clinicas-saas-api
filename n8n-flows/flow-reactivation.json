@@ -1,0 +1,41 @@
+{
+  "name": "Reativação (segunda 10h)",
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "Segunda 10h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 10 * * 1" }]
+        }
+      }
+    },
+    {
+      "id": "http",
+      "name": "POST Reativação",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [220, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BASE_URL || 'https://seu-dominio.com' }}/api/automations/reactivation",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clinic_id", "value": "={{ $json.clinic_id }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Segunda 10h": {
+      "main": [[{ "node": "POST Reativação", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {},
+  "settings": {}
+}
